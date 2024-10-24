@@ -1,0 +1,49 @@
+name: Terraform Workflow
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  terraform:
+    name: Terraform
+    runs-on: ubuntu-latest
+    env:
+      TF_ENVIRONMENT: ${{ github.event.inputs.environment }}
+      TF_REGION: ${{ github.event.inputs.region }}
+      TF_ACTION: 'plan'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+
+    - name: Install Terraform
+      uses: hashicorp/setup-terraform@v1
+
+    - name: Terraform Init and Plan
+      shell: bash
+      run: |
+        python3 terraform_workflow.py
+
+    - name: Terraform Apply
+      if: ${{ github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged }}
+      env:
+        TF_ACTION: 'apply'
+      shell: bash
+      run: |
+        python3 terraform_workflow.py
+
+    - name: Terraform Destroy
+      if: ${{ github.event.inputs.destroy == 'true' }}
+      env:
+        TF_ACTION: 'destroy'
+      shell: bash
+      run: |
+        python3 terraform_workflow.py
